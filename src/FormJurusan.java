@@ -1,0 +1,309 @@
+import java.sql.*;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/**
+ *
+ * @author User
+ */
+public class FormJurusan extends javax.swing.JInternalFrame {
+
+    private Connection connection; // Koneksi database
+    
+    /**
+     * Creates new form FormJurusan
+     */
+    public FormJurusan(Connection connection) {
+        this.connection = connection; // Simpan koneksi yang diterima
+        initComponents();
+        loadDataJurusan(); // Load data jurusan ke tabel
+    }
+    
+    /**
+     * Load data jurusan dari database ke JTable
+     */
+    private void loadDataJurusan() {
+        DefaultTableModel model = new DefaultTableModel();
+        model.addColumn("ID");
+        model.addColumn("Nama Jurusan");
+        model.addColumn("Deskripsi");
+
+        String query = "SELECT * FROM jurusan";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+
+            while (rs.next()) {
+                model.addRow(new Object[]{
+                        rs.getInt("id_jurusan"),
+                        rs.getString("nama_jurusan"),
+                        rs.getString("deskripsi")
+                });
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat data jurusan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+
+        tblJurusan.setModel(model);
+    }
+
+    /**
+     * Tambah data jurusan ke database
+     */
+    private void tambahJurusan() {
+        String namaJurusan = txtJurusan.getText();
+        String deskripsi = cmbJurusan.getSelectedItem().toString();
+
+        String query = "INSERT INTO jurusan (nama_jurusan, deskripsi) VALUES (?, ?)";
+
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, namaJurusan);
+            stmt.setString(2, deskripsi);
+            stmt.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Data jurusan berhasil ditambahkan.");
+            clearForm();
+            loadDataJurusan();
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal menambahkan jurusan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Update data jurusan di database
+     */
+    private void ubahJurusan() {
+        int selectedRow = tblJurusan.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih data jurusan yang akan diubah terlebih dahulu.");
+            return;
+        }
+
+        String id = tblJurusan.getValueAt(selectedRow, 0).toString();
+        String namaJurusan = txtJurusan.getText();
+        String deskripsi = cmbJurusan.getSelectedItem().toString();
+
+        String query = "UPDATE jurusan SET nama_jurusan = ?, deskripsi = ? WHERE id_jurusan = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, namaJurusan);
+            stmt.setString(2, deskripsi);
+            stmt.setString(3, id);
+            stmt.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Data jurusan berhasil diubah.");
+            clearForm();
+            loadDataJurusan();
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal mengubah jurusan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Hapus data jurusan dari database
+     */
+    private void hapusJurusan() {
+        int selectedRow = tblJurusan.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih data jurusan yang akan dihapus terlebih dahulu.");
+            return;
+        }
+
+        String id = tblJurusan.getValueAt(selectedRow, 0).toString();
+
+        String query = "DELETE FROM jurusan WHERE id_jurusan = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, id);
+            stmt.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Data jurusan berhasil dihapus.");
+            clearForm();
+            loadDataJurusan();
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal menghapus jurusan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Membersihkan form input
+     */
+    private void clearForm() {
+        txtJurusan.setText("");
+        cmbJurusan.setSelectedIndex(0);
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jPanel1 = new javax.swing.JPanel();
+        lblJurusan = new javax.swing.JLabel();
+        lblDeskripsi = new javax.swing.JLabel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        tblJurusan = new javax.swing.JTable();
+        btnUbahJurusan = new javax.swing.JButton();
+        btnHapusJurusan = new javax.swing.JButton();
+        btnTambahJurusan = new javax.swing.JButton();
+        cmbJurusan = new javax.swing.JComboBox<>();
+        txtJurusan = new javax.swing.JTextField();
+
+        setTitle("Form Jurusan");
+
+        jPanel1.setBackground(new java.awt.Color(0, 255, 0));
+        jPanel1.setToolTipText("");
+
+        lblJurusan.setText("Pilih Jurusan:");
+
+        lblDeskripsi.setText("Deskripsi Jurusan:");
+
+        tblJurusan.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null},
+                {null, null, null},
+                {null, null, null},
+                {null, null, null}
+            },
+            new String [] {
+                "ID", "Jurusan", "Deskripsi Jurusan"
+            }
+        ));
+        jScrollPane1.setViewportView(tblJurusan);
+
+        btnUbahJurusan.setBackground(new java.awt.Color(204, 153, 255));
+        btnUbahJurusan.setText("Ubah");
+        btnUbahJurusan.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnUbahJurusanActionPerformed(evt);
+            }
+        });
+
+        btnHapusJurusan.setBackground(new java.awt.Color(255, 0, 0));
+        btnHapusJurusan.setText("Hapus");
+        btnHapusJurusan.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnHapusJurusanActionPerformed(evt);
+            }
+        });
+
+        btnTambahJurusan.setBackground(new java.awt.Color(0, 204, 51));
+        btnTambahJurusan.setText("Tambah");
+        btnTambahJurusan.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnTambahJurusanActionPerformed(evt);
+            }
+        });
+
+        cmbJurusan.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "IPA", "IPS", "MATEMATIKA", "BAHASA INDONESIA", " " }));
+
+        txtJurusan.setText("jTextField1");
+
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(55, 55, 55)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 807, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jPanel1Layout.createSequentialGroup()
+                            .addComponent(btnTambahJurusan, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGap(92, 92, 92)
+                            .addComponent(btnUbahJurusan, javax.swing.GroupLayout.PREFERRED_SIZE, 229, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGap(62, 62, 62)
+                            .addComponent(btnHapusJurusan, javax.swing.GroupLayout.PREFERRED_SIZE, 231, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(jPanel1Layout.createSequentialGroup()
+                            .addGap(15, 15, 15)
+                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addGroup(jPanel1Layout.createSequentialGroup()
+                                    .addComponent(lblJurusan)
+                                    .addGap(71, 71, 71)
+                                    .addComponent(cmbJurusan, javax.swing.GroupLayout.PREFERRED_SIZE, 236, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGroup(jPanel1Layout.createSequentialGroup()
+                                    .addComponent(lblDeskripsi)
+                                    .addGap(49, 49, 49)
+                                    .addComponent(txtJurusan, javax.swing.GroupLayout.PREFERRED_SIZE, 325, javax.swing.GroupLayout.PREFERRED_SIZE))))))
+                .addContainerGap(182, Short.MAX_VALUE))
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(37, 37, 37)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(cmbJurusan, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblJurusan))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 103, Short.MAX_VALUE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblDeskripsi)
+                    .addComponent(txtJurusan, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(75, 75, 75)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnTambahJurusan, javax.swing.GroupLayout.PREFERRED_SIZE, 55, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnUbahJurusan, javax.swing.GroupLayout.PREFERRED_SIZE, 55, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnHapusJurusan, javax.swing.GroupLayout.PREFERRED_SIZE, 55, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(40, 40, 40)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 176, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(87, 87, 87))
+        );
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void btnUbahJurusanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUbahJurusanActionPerformed
+        ubahJurusan();
+    }//GEN-LAST:event_btnUbahJurusanActionPerformed
+
+    private void btnTambahJurusanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnTambahJurusanActionPerformed
+        tambahJurusan();
+    }//GEN-LAST:event_btnTambahJurusanActionPerformed
+
+    private void btnHapusJurusanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnHapusJurusanActionPerformed
+        hapusJurusan();
+    }//GEN-LAST:event_btnHapusJurusanActionPerformed
+
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnHapusJurusan;
+    private javax.swing.JButton btnTambahJurusan;
+    private javax.swing.JButton btnUbahJurusan;
+    private javax.swing.JComboBox<String> cmbJurusan;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JLabel lblDeskripsi;
+    private javax.swing.JLabel lblJurusan;
+    private javax.swing.JTable tblJurusan;
+    private javax.swing.JTextField txtJurusan;
+    // End of variables declaration//GEN-END:variables
+}
