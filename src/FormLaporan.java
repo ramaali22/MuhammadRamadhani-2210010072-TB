@@ -3,13 +3,19 @@ import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Paragraph;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.FontFactory;
+import com.itextpdf.text.Phrase;
+import com.itextpdf.text.pdf.PdfPCell;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.sql.*;
 import java.text.SimpleDateFormat;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import javax.swing.JOptionPane;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -21,120 +27,181 @@ import java.text.SimpleDateFormat;
  *
  * @author User
  */
+
+/**
+ * FormLaporan.java
+ * Form untuk menampilkan laporan pendaftaran siswa dan laporan per jurusan,
+ * dengan fitur export PDF.
+ */
 public class FormLaporan extends javax.swing.JInternalFrame {
 
     private Connection connection;
     private DefaultTableModel tableModel;
 
     
-    /**
-     * Creates new form FormLaporan
-     */    
+    // Konstruktor
     public FormLaporan(Connection connection) {
         this.connection = connection;
         initComponents();
         initializeTable();
-        initializeConnection();  // Inisialisasi koneksi ke database
+        initializeConnection();
     }
 
     // Inisialisasi koneksi database
     private void initializeConnection() {
         try {
-            // Gantilah dengan informasi koneksi database Anda
-            String url = "jdbc:mysql://localhost:3306/pendaftaran_siswa";  // URL database
-            String username = "root";  // Username database
-            String password = "";  // Password database
+            if (connection == null || connection.isClosed()) {
+                String url = "jdbc:mysql://localhost:3306/pendaftaran_siswa";
+                String username = "root";
+                String password = "";
 
-            connection = DriverManager.getConnection(url, username, password);
+                connection = DriverManager.getConnection(url, username, password);
+            }
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Koneksi ke database gagal: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    // Inisialisasi tabel dengan kolom yang sesuai
     private void initializeTable() {
         String[] columns = {"ID", "Nama Siswa", "Jurusan", "Tanggal"};
         tableModel = new DefaultTableModel(columns, 0);
         tblLaporan.setModel(tableModel);
     }
 
+    // Memuat data ke tabel berdasarkan filter
     private void loadData(String laporan, String tanggal) {
-        tableModel.setRowCount(0);
+    tableModel.setRowCount(0); // Reset data di tabel
+    try (Statement stmt = connection.createStatement()) {
+        String query = "";
 
-        try (Statement stmt = connection.createStatement()) {
+        if ("Laporan Pendaftaran".equals(laporan)) {
+            // Set kolom tabel untuk laporan pendaftaran
+            String[] columns = {"ID", "Nama Siswa", "Jurusan", "Tanggal"};
+            setTableColumns(columns);
 
-            String query = "";
-
-            if ("Laporan Pendaftaran".equals(laporan)) {
-                query = "SELECT siswa.id_siswa, siswa.nama_siswa, jurusan.nama_jurusan, pendaftaran.tanggal " +
-                        "FROM siswa " +
-                        "JOIN pendaftaran ON siswa.id_siswa = pendaftaran.id_siswa " +
-                        "JOIN jurusan ON pendaftaran.id_jurusan = jurusan.id_jurusan";
-            } else if ("Laporan Per Jurusan".equals(laporan)) {
-                query = "SELECT jurusan.nama_jurusan, COUNT(pendaftaran.id_siswa) AS jumlah, MAX(pendaftaran.tanggal) AS tanggal_terakhir " +
-                        "FROM pendaftaran " +
-                        "JOIN jurusan ON pendaftaran.id_jurusan = jurusan.id_jurusan " +
-                        "GROUP BY jurusan.nama_jurusan";
-            }
-
+            // Query data pendaftaran
+            query = "SELECT siswa.id_siswa, siswa.nama_siswa, jurusan.nama_jurusan, pendaftaran.tanggal " +
+                    "FROM siswa " +
+                    "JOIN pendaftaran ON siswa.id_siswa = pendaftaran.id_siswa " +
+                    "JOIN jurusan ON pendaftaran.id_jurusan = jurusan.id_jurusan";
             if (!tanggal.isEmpty()) {
                 query += " WHERE pendaftaran.tanggal = '" + tanggal + "'";
             }
+        } else if ("Laporan Per Jurusan".equals(laporan)) {
+            // Set kolom tabel untuk laporan per jurusan
+            String[] columns = {"Jurusan", "Jumlah Siswa"};
+            setTableColumns(columns);
 
-            ResultSet rs = stmt.executeQuery(query);
+            // Query data jumlah siswa per jurusan
+            query = "SELECT jurusan.nama_jurusan, COUNT(siswa.id_siswa) AS jumlah_siswa " +
+                    "FROM jurusan " +
+                    "JOIN pendaftaran ON jurusan.id_jurusan = pendaftaran.id_jurusan " +
+                    "JOIN siswa ON pendaftaran.id_siswa = siswa.id_siswa ";
+            if (!tanggal.isEmpty()) {
+                query += " WHERE pendaftaran.tanggal = '" + tanggal + "'";
+            }
+            query += " GROUP BY jurusan.nama_jurusan ORDER BY jurusan.nama_jurusan";
+        }
 
-            while (rs.next()) {
-                Object[] row;
-                if ("Laporan Pendaftaran".equals(laporan)) {
-                    row = new Object[]{
-                            rs.getString("id_siswa"),
-                            rs.getString("nama_siswa"),
-                            rs.getString("nama_jurusan"),
-                            rs.getString("tanggal")
-                    };
-                } else {
-                    row = new Object[]{
-                            rs.getString("nama_jurusan"),
-                            rs.getString("jumlah"),
-                            " - ",
-                            rs.getString("tanggal_terakhir")
-                    };
-                }
+        // Eksekusi query
+        ResultSet rs = stmt.executeQuery(query);
+
+        // Masukkan data ke tabel
+        while (rs.next()) {
+            if ("Laporan Pendaftaran".equals(laporan)) {
+                Object[] row = {
+                    rs.getString("id_siswa"),
+                    rs.getString("nama_siswa"),
+                    rs.getString("nama_jurusan"),
+                    rs.getString("tanggal")
+                };
+                tableModel.addRow(row);
+            } else if ("Laporan Per Jurusan".equals(laporan)) {
+                Object[] row = {
+                    rs.getString("nama_jurusan"),
+                    rs.getInt("jumlah_siswa")
+                };
                 tableModel.addRow(row);
             }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Gagal memuat data: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(this, "Gagal memuat data: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
+    // Fungsi untuk mengatur kolom tabel sesuai laporan
+    private void setTableColumns(String[] columns) {
+        tableModel = new DefaultTableModel(); // Reset model tabel
+        tableModel.setColumnIdentifiers(columns); // Set kolom tabel baru
+        tblLaporan.setModel(tableModel); // Terapkan model ke JTable
     }
 
+
     private void exportToPDF() {
-        try {
-            String filePath = "Laporan.pdf";
+    // Validasi tabel tidak kosong
+    if (tableModel == null || tableModel.getRowCount() == 0) {
+        JOptionPane.showMessageDialog(this, "Tidak ada data untuk diekspor", "Peringatan", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    try {
+        // Membuat nama file dinamis berdasarkan tanggal dan waktu
+        String timeStamp = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new java.util.Date());
+        String fileName = "laporan_" + timeStamp + ".pdf";
+        
+        // Path lengkap untuk menyimpan file
+        String filePath = "C:\\Users\\User\\OneDrive\\Documents\\NetBeansProjects\\AplikasiPendaftaranSiswa\\" + fileName;
+
+        // Menggunakan try-with-resources untuk manajemen dokumen
+        try (FileOutputStream fileOut = new FileOutputStream(filePath)) {
+            // Dokumen PDF
             Document document = new Document();
-            PdfWriter.getInstance(document, new FileOutputStream(filePath));
+            PdfWriter.getInstance(document, fileOut);
             document.open();
 
-            document.add(new Paragraph("Laporan Pendaftaran"));
-            document.add(new Paragraph("======================================"));
+            // Judul Laporan
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16);
+            Paragraph title = new Paragraph("Laporan Data Siswa", titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            document.add(title);
+
+            document.add(new Paragraph("Tanggal Export: " + new java.util.Date()));
             document.add(new Paragraph(" "));
 
+            // Membuat tabel PDF
             PdfPTable pdfTable = new PdfPTable(tableModel.getColumnCount());
+            pdfTable.setWidthPercentage(100);
 
+            // Menambahkan header kolom ke PDF
+            Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD);
             for (int i = 0; i < tableModel.getColumnCount(); i++) {
-                pdfTable.addCell(tableModel.getColumnName(i));
+                PdfPCell cell = new PdfPCell(new Phrase(tableModel.getColumnName(i), headerFont));
+                cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                pdfTable.addCell(cell);
             }
 
-            for (int i = 0; i < tableModel.getRowCount(); i++) {
-                for (int j = 0; j < tableModel.getColumnCount(); j++) {
-                    pdfTable.addCell(tableModel.getValueAt(i, j).toString());
+            // Menambahkan baris data ke PDF
+            for (int row = 0; row < tableModel.getRowCount(); row++) {
+                for (int col = 0; col < tableModel.getColumnCount(); col++) {
+                    Object value = tableModel.getValueAt(row, col);
+                    // Menangani null values
+                    String cellValue = (value != null) ? value.toString() : "";
+                    pdfTable.addCell(cellValue);
                 }
             }
 
             document.add(pdfTable);
             document.close();
 
-            JOptionPane.showMessageDialog(this, "Laporan berhasil dicetak ke PDF: " + filePath, "Informasi", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Laporan berhasil disimpan di: " + filePath, 
+                "Sukses", JOptionPane.INFORMATION_MESSAGE);
+
+        }
         } catch (DocumentException | IOException e) {
-            JOptionPane.showMessageDialog(this, "Gagal mencetak laporan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Gagal menyimpan laporan: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -151,18 +218,21 @@ public class FormLaporan extends javax.swing.JInternalFrame {
         cmbLaporan = new javax.swing.JComboBox<>();
         tanggalLaporan = new com.toedter.calendar.JDateChooser();
         btnCari = new javax.swing.JButton();
+        jLabel1 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         tblLaporan = new javax.swing.JTable();
         btnCetak = new javax.swing.JButton();
         lblPilihLaporan = new javax.swing.JLabel();
         lblTglLaporan = new javax.swing.JLabel();
 
-        setTitle("Laporan Pendaftaran");
+        setTitle("Laporan");
+        setPreferredSize(new java.awt.Dimension(888, 700));
 
         jPanel1.setBackground(new java.awt.Color(0, 255, 0));
 
         cmbLaporan.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Laporan Pendaftaran", "Laporan Per Jurusan", " " }));
 
+        btnCari.setBackground(new java.awt.Color(51, 51, 255));
         btnCari.setText("Cari");
         btnCari.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -170,25 +240,12 @@ public class FormLaporan extends javax.swing.JInternalFrame {
             }
         });
 
-        tblLaporan.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
-            },
-            new String [] {
-                "ID", "Nama Siswa", "Jurusan", "Tanggal"
-            }
-        ));
+        jLabel1.setFont(new java.awt.Font("Times New Roman", 1, 18)); // NOI18N
+        jLabel1.setText("Tabel Laporan");
+
         jScrollPane1.setViewportView(tblLaporan);
 
+        btnCetak.setBackground(new java.awt.Color(0, 153, 0));
         btnCetak.setText("Cetak Laporan PDF");
         btnCetak.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -197,17 +254,17 @@ public class FormLaporan extends javax.swing.JInternalFrame {
         });
 
         lblPilihLaporan.setFont(new java.awt.Font("Times New Roman", 0, 24)); // NOI18N
-        lblPilihLaporan.setText("Pilih Laporan");
+        lblPilihLaporan.setText("Pilih Laporan:");
 
         lblTglLaporan.setFont(new java.awt.Font("Times New Roman", 0, 24)); // NOI18N
-        lblTglLaporan.setText("Tanggal");
+        lblTglLaporan.setText("Tanggal:");
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addGap(0, 308, Short.MAX_VALUE)
+                .addGap(0, 0, Short.MAX_VALUE)
                 .addComponent(btnCetak, javax.swing.GroupLayout.PREFERRED_SIZE, 281, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(289, 289, 289))
             .addGroup(jPanel1Layout.createSequentialGroup()
@@ -222,34 +279,35 @@ public class FormLaporan extends javax.swing.JInternalFrame {
                             .addComponent(tanggalLaporan, javax.swing.GroupLayout.PREFERRED_SIZE, 360, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(cmbLaporan, javax.swing.GroupLayout.PREFERRED_SIZE, 403, javax.swing.GroupLayout.PREFERRED_SIZE)))
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(346, 346, 346)
+                        .addGap(38, 38, 38)
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 803, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(353, 353, 353)
                         .addComponent(btnCari, javax.swing.GroupLayout.PREFERRED_SIZE, 168, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(38, 38, 38)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 803, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(46, 46, 46)
+                        .addComponent(jLabel1)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(56, 56, 56)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblPilihLaporan)
+                    .addComponent(cmbLaporan, javax.swing.GroupLayout.PREFERRED_SIZE, 46, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(63, 63, 63)
-                        .addComponent(lblPilihLaporan)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(lblTglLaporan)
-                        .addGap(26, 26, 26))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(cmbLaporan, javax.swing.GroupLayout.PREFERRED_SIZE, 49, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(tanggalLaporan, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)))
+                    .addComponent(lblTglLaporan)
+                    .addComponent(tanggalLaporan, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(25, 25, 25)
                 .addComponent(btnCari, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(47, 47, 47)
+                .addGap(15, 15, 15)
+                .addComponent(jLabel1)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 258, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(btnCetak, javax.swing.GroupLayout.DEFAULT_SIZE, 53, Short.MAX_VALUE)
+                .addComponent(btnCetak, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(39, 39, 39))
         );
 
@@ -290,6 +348,7 @@ public class FormLaporan extends javax.swing.JInternalFrame {
     private javax.swing.JButton btnCari;
     private javax.swing.JButton btnCetak;
     private javax.swing.JComboBox<String> cmbLaporan;
+    private javax.swing.JLabel jLabel1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JLabel lblPilihLaporan;
