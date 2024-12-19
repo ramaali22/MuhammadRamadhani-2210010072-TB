@@ -275,9 +275,9 @@ public class FormLaporan extends javax.swing.JInternalFrame {
                             .addComponent(lblPilihLaporan)
                             .addComponent(lblTglLaporan))
                         .addGap(195, 195, 195)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(tanggalLaporan, javax.swing.GroupLayout.PREFERRED_SIZE, 360, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(cmbLaporan, javax.swing.GroupLayout.PREFERRED_SIZE, 403, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(cmbLaporan, 0, 403, Short.MAX_VALUE)
+                            .addComponent(tanggalLaporan, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(38, 38, 38)
                         .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 803, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -332,10 +332,19 @@ public class FormLaporan extends javax.swing.JInternalFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnCariActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCariActionPerformed
+        // Ambil pilihan laporan dari combo box
         String laporan = cmbLaporan.getSelectedItem().toString();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         String tanggal = (tanggalLaporan.getDate() != null) ? sdf.format(tanggalLaporan.getDate()) : "";
 
+        // Update label tabel sesuai laporan
+        if ("Laporan Pendaftaran".equals(laporan)) {
+            jLabel1.setText("Tabel Laporan Pendaftaran");
+        } else if ("Laporan Per Jurusan".equals(laporan)) {
+            jLabel1.setText("Tabel Laporan Per Jurusan");
+        }
+
+        // Muat data ke tabel
         loadData(laporan, tanggal);
     }//GEN-LAST:event_btnCariActionPerformed
 
